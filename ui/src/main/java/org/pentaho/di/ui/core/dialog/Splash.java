@@ -30,6 +30,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Arrays;
 
 import org.apache.commons.lang.StringUtils;
 import org.eclipse.swt.SWT;
@@ -41,6 +42,7 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Display;
@@ -92,7 +94,16 @@ public class Splash {
     Rectangle displayBounds = display.getPrimaryMonitor().getBounds();
 
     // "kettle_splash.png"
-    kettle_image = loadAsResource( display, BasePropertyHandler.getProperty( "splash_image" ) );
+    // KAE {
+    // kettle_image = loadAsResource( display, BasePropertyHandler.getProperty( "splash_image" ) );
+    SwtUniversalImage img = SwtSvgImageUtil.getImageAsResource( display, BasePropertyHandler.getProperty( "splash_image" ) );
+    ImageData imData = img.getAsBitmap( display ).getImageData();
+    imData.setAlpha(0, 0, 0);
+    Arrays.fill(imData.alphaData, (byte) 0);
+    Image kettle_image = new Image( display, imData );
+    img.dispose();
+    // KAE }
+
     // "spoon.ico"
     kettle_icon = loadAsResource( display, BasePropertyHandler.getProperty( "splash_icon" ) );
     // "exclamation.png"
