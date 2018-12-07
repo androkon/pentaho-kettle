@@ -33,6 +33,7 @@ import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.HttpURLConnection;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -126,10 +127,12 @@ public class JobEntryHTTP extends JobEntryBase implements Cloneable, JobEntryInt
     super( n, "" );
     url = null;
     addfilenameresult = true;
+    http_redirects = 0;//KAE
   }
 
   public JobEntryHTTP() {
     this( "" );
+    http_redirects = 0;//KAE
   }
 
   private void allocate( int nrHeaders ) {
@@ -517,7 +520,8 @@ public class JobEntryHTTP extends JobEntryBase implements Cloneable, JobEntryInt
         outputFile = KettleVFS.getOutputStream( realTargetFile, this, fileAppended );
 
         // Get a stream for the specified URL
-        server = new URL( urlToUse );
+        //KAE server = new URL( urlToUse );
+        server = getFinalURL( new URL( urlToUse ) );//KAE
         URLConnection connection = server.openConnection();
 
         // if we have HTTP headers, add them
@@ -801,5 +805,31 @@ public class JobEntryHTTP extends JobEntryBase implements Cloneable, JobEntryInt
     JobEntryValidatorUtils.andValidator().validate( this, "proxyPort", remarks,
         AndValidator.putValidators( JobEntryValidatorUtils.integerValidator() ) );
   }
+
+  //KAE {
+  private static final int MAX_REDIRECTS = 10;
+  private int http_redirects;
+  public URL getFinalURL(URL url) throws IOException, MalformedURLException, Exception  {
+      HttpURLConnection con = (HttpURLConnection) url.openConnection();
+      con.setInstanceFollowRedirects(false);
+      con.setRequestMethod("HEAD");
+      con.connect();
+      int resCode = con.getResponseCode();
+      if (resCode == HttpURLConnection.HTTP_SEE_OTHER
+              || resCode == HttpURLConnection.HTTP_MOVED_PERM
+              || resCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+          String location = con.getHeaderField("Location");
+          if (location.startsWith("/")) {
+              location = url.getProtocol() + "://" + url.getHost() + location;
+          }
+          http_redirects++;
+          if (http_redirects > MAX_REDIRECTS) {
+            throw new Exception("HTTP max redirects occured");
+          }
+          return getFinalURL(new URL(location));
+      }
+      return url;
+  }
+  //KAE }
 
 }
